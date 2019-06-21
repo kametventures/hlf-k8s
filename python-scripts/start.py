@@ -10,7 +10,7 @@ from subprocess import call
 from utils.common_utils import dowait, create_directory, remove_chaincode_docker_images, remove_chaincode_docker_containers
 from utils.config_utils import (create_configtx, create_ca_server_config, create_ca_client_config, create_peer_config,
                                  create_orderer_config, create_substrabac_config)
-from utils.docker_utils import generate_docker_compose_org, generate_docker_compose_orderer, generate_fixtures_docker
+from utils.docker_utils import generate_docker_compose_org, generate_docker_compose_orderer, generate_fixtures_docker, generate_revoke_docker
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -180,8 +180,10 @@ if __name__ == '__main__':
                         help="JSON config file to be used")
     parser.add_argument('--no-backup', action='store_true', default=False,
                         help="Remove backup binded volume. Launch from scratch")
-    parser.add_argument('--fixtures', action='store_true', default=False,
+    parser.add_argument('-f', '--fixtures', action='store_true', default=False,
                         help="Add fixtures")
+    parser.add_argument('-r', '--revoke', action='store_true', default=False,
+                        help="Revoke user and test querying")
     args = vars(parser.parse_args())
 
     # Stop all docker
@@ -220,7 +222,9 @@ if __name__ == '__main__':
     substra_network(orgs)
 
     if args['fixtures']:
-        docker_compose_path = generate_fixtures_docker(SUBSTRA_PATH, orgs[0]["misc"]["fixtures_path"], SUBSTRA_NETWORK)
+        suffix = 's' if len(orgs) - 1 > 1 else ''
+        fixtures_path = f'fixtures{len(orgs) - 1}org{suffix}.py'
+        docker_compose_path = generate_fixtures_docker(SUBSTRA_PATH, fixtures_path, SUBSTRA_NETWORK)
         project_directory = os.path.join(dir_path, os.pardir)
         call(['docker-compose', '-f', docker_compose_path, '--project-directory', project_directory, 'up', '-d',
               '--no-deps', 'fixtures'])
@@ -228,3 +232,13 @@ if __name__ == '__main__':
         dowait('the docker fixtures container to run and complete',
                160, '/substra/data/log/fixtures.log',
                ['/substra/data/log/fixtures.successful'])
+
+    if args['revoke']:
+        docker_compose_path = generate_revoke_docker(SUBSTRA_PATH, SUBSTRA_NETWORK)
+        project_directory = os.path.join(dir_path, os.pardir)
+        call(['docker-compose', '-f', docker_compose_path, '--project-directory', project_directory, 'up', '-d',
+              '--no-deps', 'revoke'])
+        # Wait for the run container to start and complete
+        dowait('the docker revoke container to run and complete',
+               160, '/substra/data/log/revoke.log',
+               ['/substra/data/log/revoke.successful'])
