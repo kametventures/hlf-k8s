@@ -6,6 +6,8 @@ import random
 
 from subprocess import call, check_output
 
+from utils.policies import d2s, s2d
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 class Client(object):
@@ -209,24 +211,32 @@ class Client(object):
         return version
 
     def makePolicy(self, orgs_mspid):
-        policy = {
-            'identities': [],
-            'policy': {}
-        }
+        roles =[f"'{x}.member'" for x in orgs_mspid]
+        policy = f"OR({', '.join(roles)})"
+        print('policy: ',policy, flush=True)
 
-        for index, org_mspid in enumerate(orgs_mspid):
-            policy['identities'].append({'role': {'name': 'member', 'mspId': org_mspid}})
+        return s2d.parse(policy)
 
-            if len(orgs_mspid) == 1:
-                policy['policy'] = {'signed-by': index}
-            else:
-                if not '1-of' in policy['policy']:
-                    policy['policy']['1-of'] = []
-                policy['policy']['1-of'].append({'signed-by': index})
-
-        print(f'policy: {policy}', flush=True)
-
-        return policy
+        # policy = {
+        #     'identities': [],
+        #     'policy': {}
+        # }
+        #
+        # for index, org_mspid in enumerate(orgs_mspid):
+        #     policy['identities'].append({'role': {'name': 'member', 'mspId': org_mspid}})
+        #
+        #     if len(orgs_mspid) == 1:
+        #         policy['policy'] = {'signed-by': index}
+        #     else:
+        #         if not '1-of' in policy['policy']:
+        #             policy['policy']['1-of'] = []
+        #         policy['policy']['1-of'].append({'signed-by': index})
+        #
+        # print(f'policy: {policy}', flush=True)
+        #
+        # print(d2s.parse(policy))
+        #
+        # return policy
 
     def instanciateChaincode(self, args=None):
 

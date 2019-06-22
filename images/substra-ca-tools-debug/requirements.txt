@@ -1,5 +1,6 @@
 docker == 3.5.0
 requests == 2.20.0
+lark-parser==0.7.1
 
 aiogrpc >= 1.6
 cryptography >= 1.9
