@@ -215,28 +215,7 @@ class Client(object):
         policy = f"OR({', '.join(roles)})"
         print('policy: ',policy, flush=True)
 
-        return s2d.parse(policy)
-
-        # policy = {
-        #     'identities': [],
-        #     'policy': {}
-        # }
-        #
-        # for index, org_mspid in enumerate(orgs_mspid):
-        #     policy['identities'].append({'role': {'name': 'member', 'mspId': org_mspid}})
-        #
-        #     if len(orgs_mspid) == 1:
-        #         policy['policy'] = {'signed-by': index}
-        #     else:
-        #         if not '1-of' in policy['policy']:
-        #             policy['policy']['1-of'] = []
-        #         policy['policy']['1-of'].append({'signed-by': index})
-        #
-        # print(f'policy: {policy}', flush=True)
-        #
-        # print(d2s.parse(policy))
-        #
-        # return policy
+        return s2d().parse(policy)
 
     def instanciateChaincode(self, args=None):
 

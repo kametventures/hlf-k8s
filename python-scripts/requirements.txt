@@ -1,3 +1,4 @@
 PyYAML==5.1
-requests==2.20.0
 git+git://github.com/hyperledger/fabric-sdk-py.git@4d41aef84785ab790471db4ad9226b19294a27e7 # fabric-sdk-py==0.8.0
+lark-parser == 0.7.1
+requests==2.20.0

@@ -1,4 +1,4 @@
-from pprint import pprint
+import copy
 
 from lark import Lark
 from lark import Transformer
@@ -13,14 +13,11 @@ s2d_grammar = r"""
     name: /[\w\d\-\$\&\+\,\:\;\=\?\@\#\|\<\>\^\*\(\)\%\!]+/
     mspid: WORD
     role: "'" name dot mspid "'"
-    
     or: "OR"
     and: "AND"
     outof: "OutOf"
     logic: or | and | outof
-    
     e : logic "(" [value ("," value)*] ")"
-
 
     %import common.WORD
     %import common.LETTER
@@ -31,9 +28,11 @@ s2d_grammar = r"""
     """
 
 
-class StringToDict(Transformer):
-    id = 0
-    roles = []
+class String2Dict(Transformer):
+
+    def __init__(self):
+        self.id = 0
+        self.roles = []
 
     def unique_list_of_dict(self, l):
         unique_l = []
@@ -54,7 +53,10 @@ class StringToDict(Transformer):
                 identities += v['identities']
                 policies.append(v['policy'])
             else:
-                identities.append({"role": {'name': v['name'], 'mspId': v['mspId']}})
+                identities.append({"role": {
+                    'name': v['name'],
+                    'mspId': v['mspId']
+                }})
                 policies.append({"signed-by": v['id']})
 
         return {
@@ -76,10 +78,13 @@ class StringToDict(Transformer):
 
         # check if identity already exists in self.identities
         for role in self.roles:
-            if role['name'] == name and role['mspId'] == mspId:
+            if role['name'] == name \
+                    and role['mspId'] == mspId:
                 break
         else:
-            role = {"name": name, "mspId": mspId, "id": self.id}
+            role = {"name": name,
+                    "mspId": mspId,
+                    "id": self.id}
             self.id += 1
             self.roles.append(role)
 
@@ -88,6 +93,18 @@ class StringToDict(Transformer):
     def logic(self, items):
         logic, = items
         return logic.data
+
+    def dot(self, *args):
+        return '.'
+
+    def dash(self, *args):
+        return '-'
+
+    def mspid(self, items):
+        return str(items[0])
+
+    def number(self, items):
+        return int(items[0])
 
     def e(self, items):
         logic, *args = items
@@ -100,11 +117,6 @@ class StringToDict(Transformer):
             return self.get_outof(args)
 
         return items
-
-    dot = lambda self, _: '.'
-    dash = lambda self, _: '-'
-    mspid = lambda self, s: str(s[0])
-    number = lambda self, s: int(s[0])
 
 
 class Dict2String(object):
@@ -132,121 +144,20 @@ class Dict2String(object):
 
         return f"OutOf({n}, {', '.join(roles)}{', '.join(subpolicies)})"
 
-    def parse(self, d):
-        self.roles = [f"'{x['role']['mspId']}.{x['role']['name']}'" for x in d['identities']]
+    def parse(self, policy):
+        p = copy.deepcopy(policy)
 
-        return self.get_policy(d['policy'])
+        self.roles = [f"'{x['role']['mspId']}.{x['role']['name']}'"
+                      for x in p['identities']]
+
+        return self.get_policy(p['policy'])
 
 
-s2d = Lark(s2d_grammar, start='value', parser='lalr', transformer=StringToDict())
+def s2d():
+    # new instance for resetting local variables on each call
+    transformer = String2Dict()
+    return Lark(s2d_grammar, start='value', parser='lalr',
+                transformer=transformer)
+
+
 d2s = Dict2String()
-
-
-
-# outof_or = "OutOf(1, 'Org1.member', 'Org2.member')"
-# # is equivalent to
-# ore = "OR('Org1.member', 'Org2.member')"
-#
-# outof_and = "OutOf(2, 'Org1.member', 'Org2.member')"
-# # is equivalent to
-# ande = "AND('Org1.member', 'Org2.member')"
-#
-# outof_complex = "OutOf(2, 'Org1.member', 'Org2.member', 'Org3.member')"
-# # is equivalent to
-# complex = "OR(AND('Org1.member', 'Org2.member'), AND('Org1.member', 'Org3.member'), AND('Org2.member', 'Org3.member'))"
-#
-# _1ofAny = "OR('Org1.member', 'Org2.member', 'Org1.admin', 'Org2.admin')"
-#
-# _1AdminOr2Other = "OR(AND('Org1.member', 'Org2.member'), 'Org1.admin', 'Org2.admin')"
-#
-# _2ofAny = "OutOf(2, 'Org1.member', 'Org2.member', 'Org1.admin', 'Org2.admin')"
-
-# print(ore)
-# pprint(s2d.parse(ore))
-#
-# print(outof_or)
-# pprint(s2d.parse(outof_or))
-#
-# print(ande)
-# pprint(s2d.parse(ande))
-#
-# print(outof_and)
-# pprint(s2d.parse(outof_and))
-#
-# print(complex)
-# pprint(s2d.parse(complex))
-#
-# print(outof_complex)
-# pprint(s2d.parse(outof_complex))
-
-# print(_1ofAny)
-# pprint(s2d.parse(_1ofAny))
-
-# print(_1AdminOr2Other)
-# pprint(s2d.parse(_1AdminOr2Other))
-
-# print(_2ofAny)
-# pprint(s2d.parse(_2ofAny))
-
-# {
-# 	"1ofAny": {
-# 		"identities": [
-# 			{ "role": { "name": "member", "mspId": "Org1MSP" }},
-# 			{ "role": { "name": "member", "mspId": "Org2MSP" }},
-# 			{ "role": { "name": "admin", "mspId": "Org1MSP" }},
-# 			{ "role": { "name": "admin", "mspId": "Org2MSP" }}
-# 		],
-# 		"policy": {
-# 			"1-of": [{ "signed-by": 0}, { "signed-by": 1 }, { "signed-by": 2 }, { "signed-by": 3}]
-# 		}
-# 	},
-# 	"1AdminOr2Other": {
-# 			"identities": [
-# 				{ "role": { "name": "member", "mspId": "Org1MSP" }},
-# 				{ "role": { "name": "member", "mspId": "Org2MSP" }},
-# 				{ "role": { "name": "admin", "mspId": "Org1MSP" }},
-# 				{ "role": { "name": "admin", "mspId": "Org2MSP" }}
-# 			],
-# 			"policy": {
-# 				"1-of": [
-# 					{ "signed-by": 2},
-# 					{ "signed-by": 3},
-# 					{ "2-of": [{ "signed-by": 0}, { "signed-by": 1 }]}
-# 				]
-# 			}
-# 	},
-# 	"2ofAny": {
-# 		"identities": [
-# 			{ "role": { "name": "member", "mspId": "Org1MSP" }},
-# 			{ "role": { "name": "member", "mspId": "Org2MSP" }},
-# 			{ "role": { "name": "admin", "mspId": "Org1MSP" }},
-# 			{ "role": { "name": "admin", "mspId": "Org2MSP" }}
-# 		],
-# 		"policy": {
-# 			"2-of": [{"signed-by": 0}, {"signed-by": 1}, {"signed-by": 2}, {"signed-by": 3}]
-# 		}
-# 	}
-# }
-
-
-# policy = {'identities': [{'role': {'name': 'member', 'mspId': 'chu-nantesMSP'}}], 'policy': {'signed-by': 0}}
-# print(d2s.parse(policy))
-
-# ore = s2d.parse(ore)
-# pprint(ore)
-# print(p.s2d(ore))
-#
-# ande = s2d.parse(ande)
-# pprint(ande)
-# print(p.s2d(ande))
-
-# outof_complex = s2d.parse(outof_complex)
-# pprint(outof_complex)
-# print(p.s2d(outof_complex))
-#
-# complex = s2d.parse(complex)
-# pprint(complex)
-# complex = d2s.parse(complex)
-# print(complex)
-# complex = s2d.parse(complex)
-# pprint(complex)
