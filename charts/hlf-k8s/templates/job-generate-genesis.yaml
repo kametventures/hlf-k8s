@@ -45,7 +45,9 @@ spec:
         command: ['sh', '-c']
         args:
           - |
+            {{- if (not .Values.orderer.ord.genesis.generate.enabled) }}
             generate-genesis.sh {{ .Values.systemChannel }} {{ .Values.secrets.genesis }}
+            {{- end }}
             kubectl delete pods -l app=orderer,release={{ .Release.Name }}
         env:
         - name: CORE_PEER_MSPCONFIGPATH

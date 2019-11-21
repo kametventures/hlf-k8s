@@ -44,6 +44,8 @@ deploy:
           systemOrganizations[0].secret: org-1-org-config
           orderer.host: network-orderer.orderer  # {name}.{namespace}
           orderer.ord.mspID: MyOrdererMSP
+          orderer.ord.genesis.generate.enabled: true
+          orderer.ord.genesis.generate.configMap: network-orderer-hlf-k8s-fabric
           fetchSecrets[0].from: org-config
           fetchSecrets[0].to: org-1-org-config
           fetchSecrets[0].filename: configOrg.json
